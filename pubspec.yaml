@@ -1,7 +1,8 @@
 name: xcomments
 description: Comments.
-version: 0.0.1
+version: 0.0.1+1
 homepage:
+repository: https://github.com/chikenare/xcomments
 
 environment:
   sdk: '>=3.1.3 <4.0.0'
