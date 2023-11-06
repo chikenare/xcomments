@@ -40,9 +40,23 @@ class XCommentsApi {
     int page = 1,
   }) async {
     final res = await _dio
-        .get('/comments/${client.id}', queryParameters: {'page': page});
+        .get('/comments/${client.channel}', queryParameters: {'page': page});
+    final comments = _setComments(res.data['data']);
+    return comments;
+  }
 
-    return List.from(res.data['data'].map((e) {
+  Future<List<XComment>> getReplies(
+    String id, {
+    int page = 1,
+  }) async {
+    final res = await _dio
+        .get('/comments/$id', queryParameters: {'page': page, 'reply': true});
+    final comments = _setComments(res.data['data']);
+    return comments;
+  }
+
+  List<XComment> _setComments(List data) {
+    return List.from(data.map((e) {
       final user = Commentator()
         ..id = e['user_id'].toString()
         ..name = e['user']['name']
@@ -51,14 +65,20 @@ class XCommentsApi {
         ..body = e['body']
         ..id = e['id'].toString()
         ..commentator = user
+        ..repliesCount = e['replies_count'] ?? 0
         ..createdAt = e['created_at'];
     }));
   }
 
-  Future<XComment> storeComment(
-      {required String commentableId, required String body}) async {
+  Future<XComment> storeComment({
+    required String channel,
+    required String body,
+    required bool isReply,
+  }) async {
+    final Map<String, String> params = {};
+    if (isReply) params.addAll({'reply': 'true'});
     final res = await _dio.post('/comments',
-        data: {'body': body, 'commentable_id': commentableId});
+        data: {'body': body, 'channel': channel}, queryParameters: params);
     final data = res.data['data'];
     return XComment()
       ..id = data['id'].toString()
@@ -70,16 +90,21 @@ class XCommentsApi {
     await _dio.delete('/comments/$commentId');
   }
 
-  Future<XComment?> uploadFile(String commentableId) async {
+  Future<XComment?> uploadFile(String channel, {bool? isReply}) async {
     final resFiles = await FilePicker.platform.pickFiles(type: FileType.image);
     if (resFiles == null) return null;
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(resFiles.files.first.path!),
-      'commentable_id': commentableId,
+      'channel': channel,
     });
 
+    final Map<String, dynamic> params = {};
+    if (isReply ?? false) params.addAll({'reply': true});
+
     final res = await _dio.post('/comments',
-        data: formData, options: Options(followRedirects: false));
+        data: formData,
+        options: Options(followRedirects: false),
+        queryParameters: params);
 
     final data = res.data['data'];
     return XComment()

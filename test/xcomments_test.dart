@@ -5,7 +5,7 @@ import 'package:xcomments/xcomments.dart';
 void main() {
   final client = XCommentsClient('testxd',
       urlApi: 'http://192.168.100.21',
-      id: 'movies',
+      channel: 'movies',
       user: User(name: 'Will', token: 'mytokenxdx'));
   final api = XCommentsApi(client);
   test('Test', () async {

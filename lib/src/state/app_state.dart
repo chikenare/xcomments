@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:xcomments/src/api/xcomments_api.dart';
 import 'package:xcomments/src/models/commentator.dart';
+import 'package:xcomments/src/models/reply_data.dart';
 import 'package:xcomments/src/models/xcomment.dart';
 import 'package:xcomments/xcomments.dart';
 
@@ -13,11 +14,22 @@ class AppState extends ChangeNotifier {
   XCommentsApi get _api => XCommentsApi(client);
   final List<XComment> comments = [];
   bool loading = true, hasComments = true;
+  ReplyData? _reply;
   int page = 0;
 
+  ReplyData? get reply => _reply;
+  set reply(ReplyData? value) {
+    _reply = value;
+    notifyListeners();
+  }
+
   void initComments() async {
-    await setUser();
-    await getComments();
+    try {
+      await setUser();
+      await getComments();
+    } catch (e) {
+      print(e.toString());
+    }
   }
 
   Future<void> setUser() async {
@@ -34,13 +46,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> geReplies(String id) async {
+    final res = await _api.getReplies(id, page: 1);
+    comments.firstWhere((e) => e.id == id).replies.addAll(res);
+    notifyListeners();
+  }
+
   Future<void> storeComment(String body) async {
-    final res = await _api.storeComment(commentableId: client.id, body: body);
-    final commentator = Commentator()
+    final isReply = _reply != null;
+    final res = await _api.storeComment(
+      channel: isReply ? _reply!.id : client.channel,
+      body: body,
+      isReply: isReply,
+    );
+    res.commentator = Commentator()
       ..id = user!.id
       ..avatar = user!.avatar
       ..name = user!.name;
-    comments.insert(0, res..commentator = commentator);
+    isReply
+        ? comments.firstWhere((e) => e.id == _reply?.id).replies.add(res)
+        : comments.insert(0, res);
     notifyListeners();
   }
 
@@ -49,7 +74,11 @@ class AppState extends ChangeNotifier {
       ..id = user!.id
       ..avatar = user!.avatar
       ..name = user!.name;
-    comments.insert(0, comment..commentator = commentator);
+    comment.commentator = commentator;
+    _reply == null
+        ? comments.insert(0, comment)
+        : comments.firstWhere((e) => e.id == _reply!.id).replies.add(comment);
+
     notifyListeners();
   }
 }

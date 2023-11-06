@@ -37,8 +37,10 @@ class _MessageInputState extends State<MessageInput> {
 
   void _uploadFile() async {
     try {
-      final comment =
-          await XCommentsApi(widget.client).uploadFile(widget.client.id);
+      final comment = await XCommentsApi(widget.client).uploadFile(
+          _appState.reply?.id ?? widget.client.channel,
+          isReply: _appState.reply != null);
+
       if (comment != null) _appState.addComment(comment);
     } catch (e) {
       if (!mounted) return;
@@ -57,22 +59,41 @@ class _MessageInputState extends State<MessageInput> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(6.0),
-      child: TextFormField(
-        controller: _controller,
-        decoration: InputDecoration(
-            border: const OutlineInputBorder(),
-            labelText: 'Comment',
-            prefixIcon: IconButton(
-              onPressed: _uploadFile,
-              icon: const Icon(Icons.add_circle_outline),
-            ),
-            suffixIcon: IconButton(
-              icon: _sending
-                  ? const SizedBox(
-                      width: 24, height: 24, child: CircularProgressIndicator())
-                  : const Icon(Icons.send),
-              onPressed: _sendMessage,
-            )),
+      child: Column(
+        children: [
+          Consumer<AppState>(builder: (context, value, child) {
+            return value.reply == null
+                ? const SizedBox.shrink()
+                : Row(
+                    children: [
+                      Text('Reply to ${value.reply?.name} · '),
+                      GestureDetector(
+                        onTap: () => value.reply = null,
+                        child: const Text('Cancel'),
+                      )
+                    ],
+                  );
+          }),
+          TextFormField(
+            controller: _controller,
+            decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                labelText: 'Comment',
+                prefixIcon: IconButton(
+                  onPressed: _uploadFile,
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+                suffixIcon: IconButton(
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator())
+                      : const Icon(Icons.send),
+                  onPressed: _sendMessage,
+                )),
+          ),
+        ],
       ),
     );
   }

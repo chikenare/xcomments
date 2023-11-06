@@ -39,7 +39,6 @@ class _CommentsPageState extends State<XCommentsViewWidget> {
       builder: (context, value, child) => value.loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: ListView.builder(
